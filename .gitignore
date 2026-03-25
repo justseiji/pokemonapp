@@ -1,0 +1,17 @@
+# AWS Secret Credentials
+backend/.env
+
+# Node Dependencies
+node_modules/
+backend/node_modules/
+
+# Flutter Dependencies & Build Caches
+haupokemon_app/.dart_tool/
+haupokemon_app/.packages
+haupokemon_app/build/
+haupokemon_app/.flutter-plugins
+haupokemon_app/.flutter-plugins-dependencies
+
+# OS Files
+.DS_Store
+Thumbs.db
