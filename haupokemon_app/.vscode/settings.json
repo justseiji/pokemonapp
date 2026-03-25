@@ -1,0 +1,7 @@
+{
+    "java.import.gradle.enabled": false,
+    "java.import.exclusions": [
+        "**/android/**",
+        "**/ios/**"
+    ]
+}
