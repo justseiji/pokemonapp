@@ -70,7 +70,7 @@ class HomeScreen extends StatelessWidget {
               }
               return UserAccountsDrawerHeader(
                 decoration: const BoxDecoration(
-                  color: Color(0xFF386641),
+                  color: Color.fromARGB(255, 35, 96, 165),
                 ),
                 accountName: Text(
                   pName,
@@ -78,7 +78,7 @@ class HomeScreen extends StatelessWidget {
                 ),
                 accountEmail: const Text(''),
                 currentAccountPicture: const CircleAvatar(
-                  backgroundColor: Color(0xFFC3E8A7),
+                  backgroundColor: Color.fromARGB(255, 36, 82, 141),
                   child: Icon(Icons.catching_pokemon, color: Colors.black, size: 40),
                 ),
               );
