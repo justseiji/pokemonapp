@@ -68,18 +68,26 @@ class HomeScreen extends StatelessWidget {
               if (snapshot.hasData) {
                 pName = snapshot.data!.getString('player_name') ?? 'Monster Admin';
               }
-              return UserAccountsDrawerHeader(
+              return DrawerHeader(
                 decoration: const BoxDecoration(
                   color: Color.fromARGB(255, 35, 96, 165),
                 ),
-                accountName: Text(
-                  pName,
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                accountEmail: const Text(''),
-                currentAccountPicture: const CircleAvatar(
-                  backgroundColor: Color.fromARGB(255, 36, 82, 141),
-                  child: Icon(Icons.catching_pokemon, color: Colors.black, size: 40),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    const CircleAvatar(
+                      backgroundColor: Color.fromARGB(255, 36, 82, 141),
+                      radius: 36,
+                      child: Icon(Icons.catching_pokemon, color: Colors.black, size: 45),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      pName,
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
                 ),
               );
             },
