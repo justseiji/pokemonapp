@@ -65,17 +65,18 @@ class HomeScreen extends StatelessWidget {
             future: SharedPreferences.getInstance(),
             builder: (context, snapshot) {
               String pName = 'Monster Admin';
-              String uName = 'Player';
               if (snapshot.hasData) {
                 pName = snapshot.data!.getString('player_name') ?? 'Monster Admin';
-                uName = snapshot.data!.getString('username') ?? 'Player';
               }
               return UserAccountsDrawerHeader(
                 decoration: const BoxDecoration(
                   color: Color(0xFF386641),
                 ),
-                accountName: Text(pName),
-                accountEmail: Text(uName),
+                accountName: Text(
+                  pName,
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                accountEmail: const Text(''),
                 currentAccountPicture: const CircleAvatar(
                   backgroundColor: Color(0xFFC3E8A7),
                   child: Icon(Icons.catching_pokemon, color: Colors.black, size: 40),
