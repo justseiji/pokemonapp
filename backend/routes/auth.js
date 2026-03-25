@@ -12,7 +12,7 @@ router.post('/login', async (req, res) => {
   }
 
   try {
-    const [rows] = await pool.query('SELECT player_id as id, username FROM playerstbl WHERE username = ? AND password = ?', [username, password]);
+    const [rows] = await pool.query('SELECT player_id as id, player_name, username FROM playerstbl WHERE username = ? AND password = ?', [username, password]);
     
     if (rows.length > 0) {
       const player = rows[0];
