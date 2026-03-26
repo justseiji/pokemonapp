@@ -49,12 +49,73 @@ class _PlayersScreenState extends State<PlayersScreen> {
     ) ?? false;
   }
 
-  void _deletePlayer(int id) async {
-    final confirm = await _showConfirmDialog('Confirm Deletion', 'Are you sure you want to delete this player forever?');
+  Future<String?> _verifyPlayerPassword(Map<String, dynamic> player) async {
+    final passwordController = TextEditingController();
+    bool _isVerifying = false;
+    
+    return await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            title: Text('Security Check: ${player['username']}'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Please re-enter this account\'s original password to authorize modifications.'),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: passwordController,
+                  decoration: const InputDecoration(labelText: 'Verify Password'),
+                  obscureText: true,
+                ),
+                if (_isVerifying) const Padding(
+                  padding: EdgeInsets.only(top: 16.0),
+                  child: CircularProgressIndicator(),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, null),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white),
+                onPressed: _isVerifying ? null : () async {
+                  if (passwordController.text.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password is required')));
+                    return;
+                  }
+                  setState(() => _isVerifying = true);
+                  try {
+                    // Send password dynamically to AWS login route to check authenticity
+                    await apiService.login(player['username'].toString(), passwordController.text);
+                    Navigator.pop(context, passwordController.text); // Success! Lockpass String Granted.
+                  } catch (e) {
+                    setState(() => _isVerifying = false);
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Incorrect Password! Access Denied.', style: TextStyle(color: Colors.white)), backgroundColor: Colors.red));
+                  }
+                },
+                child: const Text('Verify'),
+              ),
+            ],
+          );
+        }
+      ),
+    );
+  }
+
+  void _deletePlayer(Map<String, dynamic> player) async {
+    final verifiedPassword = await _verifyPlayerPassword(player);
+    if (verifiedPassword == null) return;
+
+    final confirm = await _showConfirmDialog('Confirm Deletion', 'Verification passed! Are you absolutely sure you want to delete this player forever?');
     if (!confirm) return;
     
     try {
-      await apiService.deleteData('players/$id');
+      await apiService.deleteData('players/${player['id']}');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Player deleted successfully!')),
@@ -70,7 +131,7 @@ class _PlayersScreenState extends State<PlayersScreen> {
     _fetchPlayers();
   }
 
-  void _showPlayerDialog([Map<String, dynamic>? player]) {
+  void _showPlayerDialog([Map<String, dynamic>? player, String? verifiedPassword]) {
     final playerNameController = TextEditingController(
       text: player?['player_name'],
     );
@@ -117,7 +178,7 @@ class _PlayersScreenState extends State<PlayersScreen> {
                 final data = {
                   'player_name': playerNameController.text,
                   'username': usernameController.text,
-                  'password': passwordController.text,
+                  'password': passwordController.text.isEmpty && verifiedPassword != null ? verifiedPassword : passwordController.text,
                 };
                 if (player == null) {
                   await apiService.postData('players', data);
@@ -196,14 +257,19 @@ class _PlayersScreenState extends State<PlayersScreen> {
                                   Icons.edit,
                                   color: Colors.blue,
                                 ),
-                                onPressed: () => _showPlayerDialog(player),
+                                onPressed: () async {
+                                  final verifiedPassword = await _verifyPlayerPassword(player);
+                                  if (verifiedPassword != null) {
+                                    _showPlayerDialog(player, verifiedPassword);
+                                  }
+                                },
                               ),
                               IconButton(
                                 icon: const Icon(
                                   Icons.delete,
                                   color: Colors.red,
                                 ),
-                                onPressed: () => _deletePlayer(player['id']),
+                                onPressed: () => _deletePlayer(player),
                               ),
                             ],
                           ),
