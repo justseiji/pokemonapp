@@ -25,7 +25,10 @@ class _EditMonsterScreenState extends State<EditMonsterScreen> {
   Uint8List? _imageBytes;
   final ImagePicker _picker = ImagePicker();
 
-  LatLng _currentPosition = const LatLng(14.5995, 120.9842);
+  LatLng _currentPosition = const LatLng(0, 0); // No Manila fallback
+  LatLng _userPhysicalPosition = const LatLng(0, 0);
+  bool _hasGPSLock = false;
+
   final MapController _mapController = MapController();
 
   @override
@@ -38,31 +41,40 @@ class _EditMonsterScreenState extends State<EditMonsterScreen> {
 
     if (widget.monster != null && widget.monster!['lat'] != null && widget.monster!['lng'] != null) {
       _currentPosition = LatLng(
-        double.tryParse(widget.monster!['lat'].toString()) ?? 14.5995,
-        double.tryParse(widget.monster!['lng'].toString()) ?? 120.9842,
+        double.tryParse(widget.monster!['lat'].toString()) ?? 0,
+        double.tryParse(widget.monster!['lng'].toString()) ?? 0,
       );
+      _getUserPhysicalLocation(false); // Load GPS for crosshair button, keep camera on monster
     } else {
-      _getCurrentLocation();
+      _getUserPhysicalLocation(true); // Move camera natively to user
     }
   }
 
-  Future<void> _getCurrentLocation() async {
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) return;
+  Future<void> _getUserPhysicalLocation(bool moveCamera) async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return;
 
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) return;
-    }
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) return;
+      }
 
-    if (permission == LocationPermission.deniedForever) return;
+      if (permission == LocationPermission.deniedForever) return;
 
-    Position position = await Geolocator.getCurrentPosition();
-    setState(() {
-      _currentPosition = LatLng(position.latitude, position.longitude);
-      _mapController.move(_currentPosition, 16.0);
-    });
+      Position position = await Geolocator.getCurrentPosition();
+      if (mounted) {
+        setState(() {
+          _userPhysicalPosition = LatLng(position.latitude, position.longitude);
+          _hasGPSLock = true;
+          if (moveCamera) {
+            _currentPosition = LatLng(position.latitude, position.longitude);
+            _mapController.move(_currentPosition, 16.0);
+          }
+        });
+      }
+    } catch (e) {}
   }
 
   Future<bool> _showConfirmDialog(String title, String content) async {
@@ -180,45 +192,78 @@ class _EditMonsterScreenState extends State<EditMonsterScreen> {
               borderRadius: BorderRadius.circular(12),
               child: SizedBox(
                 height: 250,
-                child: FlutterMap(
-                  mapController: _mapController,
-                  options: MapOptions(
-                    initialCenter: _currentPosition,
-                    initialZoom: 16.0,
-                    onTap: (tapPosition, point) {
-                      setState(() {
-                        _currentPosition = point;
-                      });
-                    },
-                  ),
+                child: Stack(
                   children: [
-                    TileLayer(
-                      urlTemplate: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-                      subdomains: const ['a', 'b', 'c', 'd'],
-                      userAgentPackageName: 'com.example.haupokemon_app',
-                    ),
-                    CircleLayer(
-                      circles: [
-                        CircleMarker(
-                          point: _currentPosition,
-                          color: Colors.blue.withOpacity(0.3),
-                          borderColor: Colors.blue,
-                          borderStrokeWidth: 2,
-                          useRadiusInMeter: true,
-                          radius: currentRadius,
+                    FlutterMap(
+                      mapController: _mapController,
+                      options: MapOptions(
+                        initialCenter: _currentPosition,
+                        initialZoom: widget.monster == null && !_hasGPSLock ? 3.0 : 16.0,
+                        onTap: (tapPosition, point) {
+                          setState(() {
+                            _currentPosition = point;
+                          });
+                        },
+                      ),
+                      children: [
+                        TileLayer(
+                          urlTemplate: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+                          subdomains: const ['a', 'b', 'c', 'd'],
+                          userAgentPackageName: 'com.example.haupokemon_app',
+                        ),
+                        if (_hasGPSLock)
+                          MarkerLayer(
+                            markers: [
+                              Marker(
+                                point: _userPhysicalPosition,
+                                width: 30,
+                                height: 30,
+                                child: Container(
+                                  decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.blue.withOpacity(0.3), border: Border.all(color: Colors.blue, width: 2)),
+                                  child: const Center(child: CircleAvatar(backgroundColor: Colors.blue, radius: 5)),
+                                )
+                              )
+                            ]
+                          ),
+                        CircleLayer(
+                          circles: [
+                            CircleMarker(
+                              point: _currentPosition,
+                              color: Colors.blue.withOpacity(0.3),
+                              borderColor: Colors.blue,
+                              borderStrokeWidth: 2,
+                              useRadiusInMeter: true,
+                              radius: currentRadius,
+                            ),
+                          ],
+                        ),
+                        MarkerLayer(
+                          markers: [
+                            Marker(
+                              point: _currentPosition,
+                              width: 40,
+                              height: 40,
+                              child: const Icon(Icons.location_on, color: Colors.red, size: 40),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                    MarkerLayer(
-                      markers: [
-                        Marker(
-                          point: _currentPosition,
-                          width: 40,
-                          height: 40,
-                          child: const Icon(Icons.location_on, color: Colors.red, size: 40),
+                    if (_hasGPSLock)
+                      Positioned(
+                        right: 8,
+                        bottom: 8,
+                        child: FloatingActionButton.small(
+                          onPressed: () {
+                            setState(() {
+                              _currentPosition = _userPhysicalPosition;
+                            });
+                            _mapController.move(_userPhysicalPosition, 16.0);
+                          },
+                          backgroundColor: Colors.white,
+                          child: const Icon(Icons.my_location, color: Colors.blue),
                         ),
-                      ],
-                    ),
+                      )
                   ],
                 ),
               ),

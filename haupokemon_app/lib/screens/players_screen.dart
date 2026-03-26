@@ -211,6 +211,7 @@ class _PlayersScreenState extends State<PlayersScreen> {
                       },
                     ),
             ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: FloatingActionButton(
         child: const Icon(Icons.add),
         onPressed: () => _showPlayerDialog(),
