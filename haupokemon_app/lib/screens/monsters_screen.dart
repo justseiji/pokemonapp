@@ -158,6 +158,7 @@ class _MonstersScreenState extends State<MonstersScreen> {
                       },
                     ),
             ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: FloatingActionButton(
         child: const Icon(Icons.add),
         onPressed: () => _navigateToEdit(),

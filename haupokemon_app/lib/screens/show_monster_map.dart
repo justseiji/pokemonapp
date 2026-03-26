@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:geolocator/geolocator.dart';
 import '../services/api_service.dart';
 
 class ShowMonsterMapScreen extends StatefulWidget {
@@ -15,12 +16,43 @@ class _ShowMonsterMapScreenState extends State<ShowMonsterMapScreen> {
   final List<Marker> _markers = [];
   bool _isLoading = true;
 
-  static const LatLng _initialPosition = LatLng(14.5995, 120.9842);
+  LatLng _currentLocation = const LatLng(0, 0); // Temporary default until GPS locks
+  bool _hasLocation = false;
 
   @override
   void initState() {
     super.initState();
+    _fetchLocationAndMonsters();
+  }
+
+  Future<void> _fetchLocationAndMonsters() async {
     _loadMonstersOnMap();
+    _getCurrentLocation();
+  }
+
+  Future<void> _getCurrentLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return;
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) return;
+      }
+      if (permission == LocationPermission.deniedForever) return;
+
+      Position position = await Geolocator.getCurrentPosition();
+      if (mounted) {
+        setState(() {
+          _currentLocation = LatLng(position.latitude, position.longitude);
+          _hasLocation = true;
+        });
+        _mapController.move(_currentLocation, 16.0);
+      }
+    } catch (e) {
+      // Fails silently; map stays over default coordinates
+    }
   }
 
   void _loadMonstersOnMap() async {
@@ -73,9 +105,9 @@ class _ShowMonsterMapScreenState extends State<ShowMonsterMapScreen> {
           ? const Center(child: CircularProgressIndicator())
           : FlutterMap(
               mapController: _mapController,
-              options: const MapOptions(
-                initialCenter: _initialPosition,
-                initialZoom: 14.5,
+              options: MapOptions(
+                initialCenter: _currentLocation,
+                initialZoom: 3.0, // Start zoomed out globally until GPS fires
               ),
               children: [
                 TileLayer(
@@ -83,9 +115,26 @@ class _ShowMonsterMapScreenState extends State<ShowMonsterMapScreen> {
                   subdomains: const ['a', 'b', 'c', 'd'],
                   userAgentPackageName: 'com.example.haupokemon_app',
                 ),
-                MarkerLayer(markers: _markers),
+                MarkerLayer(
+                  markers: [
+                    ..._markers,
+                    if (_hasLocation)
+                      Marker(
+                        point: _currentLocation,
+                        width: 50,
+                        height: 50,
+                        child: const Icon(Icons.person_pin_circle, color: Colors.red, size: 50), // Your actual physical tracker dot
+                      ),
+                  ],
+                ),
               ],
             ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _hasLocation ? () => _mapController.move(_currentLocation, 16.0) : null,
+        backgroundColor: Colors.white,
+        elevation: 4,
+        child: Icon(Icons.my_location, color: _hasLocation ? Colors.blue : Colors.grey),
+      ),
     );
   }
 }
