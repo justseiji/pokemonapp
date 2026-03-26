@@ -107,19 +107,7 @@ class _CatchMapScreenState extends State<CatchMapScreen> {
               '${caughtMonster!['name']} (${caughtMonster!['type']}) - ${closestDistance.toStringAsFixed(2)} m away';
         });
 
-        if (closestDistance <= 100.0) {
-          await _performCatchSequence(caughtMonster, closestDistance);
-        } else {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'You are too far! You must be closer to catch it. Walk closer!',
-                ),
-              ),
-            );
-          }
-        }
+        await _performCatchSequence(caughtMonster, closestDistance);
       } else {
         if (mounted)
           ScaffoldMessenger.of(context).showSnackBar(

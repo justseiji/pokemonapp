@@ -96,9 +96,7 @@ class _PlayersScreenState extends State<PlayersScreen> {
                 labelText: 'Username (Login Account)',
               ),
             ),
-            if (player ==
-                null) // Show password field only when creating a new player
-              TextField(
+            TextField(
                 controller: passwordController,
                 decoration: const InputDecoration(labelText: 'Password'),
                 obscureText: true,
@@ -119,9 +117,9 @@ class _PlayersScreenState extends State<PlayersScreen> {
                 final data = {
                   'player_name': playerNameController.text,
                   'username': usernameController.text,
+                  'password': passwordController.text,
                 };
                 if (player == null) {
-                  data['password'] = passwordController.text;
                   await apiService.postData('players', data);
                 } else {
                   await apiService.putData('players/${player['id']}', data);
