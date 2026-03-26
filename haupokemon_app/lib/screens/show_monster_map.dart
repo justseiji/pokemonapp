@@ -79,7 +79,8 @@ class _ShowMonsterMapScreenState extends State<ShowMonsterMapScreen> {
               ),
               children: [
                 TileLayer(
-                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  urlTemplate: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+                  subdomains: const ['a', 'b', 'c', 'd'],
                   userAgentPackageName: 'com.example.haupokemon_app',
                 ),
                 MarkerLayer(markers: _markers),

@@ -4,8 +4,8 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  // Use 10.0.2.2 for Android Emulator, or localhost for Windows/Web
-  static const String baseUrl = 'http://localhost:3000';
+  // Live 24/7 AWS Elastic Beanstalk Production Server
+  static const String baseUrl = 'http://Haupokemon-api-env.eba-mwnnwtp3.us-east-1.elasticbeanstalk.com';
 
   Future<Map<String, String>> _getHeaders() async {
     final prefs = await SharedPreferences.getInstance();
