@@ -1,3 +1,4 @@
+// dart format off
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -74,14 +75,38 @@ class ApiService {
     }
   }
 
-  // EC2 Status
+  static const String awsLambdaUrl = 'https://xbo2ekleu0.execute-api.eu-west-3.amazonaws.com/default/ManageHAUPokemonEC2';
+
+  // EC2 Methods (Serverless)
   Future<Map<String, dynamic>> getEc2Status() async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/ec2/status'),
-      headers: await _getHeaders(),
+    final response = await http.post(
+      Uri.parse(awsLambdaUrl),
+      body: jsonEncode({"action": "status"}),
     );
     if (response.statusCode != 200) {
       throw Exception('EC2 status failure: ${response.body}');
+    }
+    return jsonDecode(response.body);
+  }
+
+  Future<Map<String, dynamic>> startEc2Instance() async {
+    final response = await http.post(
+      Uri.parse(awsLambdaUrl),
+      body: jsonEncode({"action": "start"}),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('EC2 start failure: ${response.body}');
+    }
+    return jsonDecode(response.body);
+  }
+
+  Future<Map<String, dynamic>> stopEc2Instance() async {
+    final response = await http.post(
+      Uri.parse(awsLambdaUrl),
+      body: jsonEncode({"action": "stop"}),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('EC2 stop failure: ${response.body}');
     }
     return jsonDecode(response.body);
   }

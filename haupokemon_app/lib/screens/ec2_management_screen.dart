@@ -37,7 +37,7 @@ class _Ec2ManagementScreenState extends State<Ec2ManagementScreen> {
 
   void _startInstance() async {
     try {
-      await apiService.postData('ec2/start', {});
+      await apiService.startEc2Instance();
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Start command sent.')));
@@ -51,7 +51,7 @@ class _Ec2ManagementScreenState extends State<Ec2ManagementScreen> {
 
   void _stopInstance() async {
     try {
-      await apiService.postData('ec2/stop', {});
+      await apiService.stopEc2Instance();
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Stop command sent.')));
