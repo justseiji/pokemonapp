@@ -21,8 +21,10 @@ const upload = multer({ storage: storage });
 router.get('/', async (req, res) => {
   try {
     const query = `
-      SELECT Monster_id AS id, Monster_name AS name, Monster_type AS type, spawn_latitude AS lat, spwan_longitude AS lng, spawn_radius_meters AS radius, picture_url
-      FROM monsterstbl
+      SELECT m.Monster_id AS id, m.Monster_name AS name, m.Monster_type AS type, m.spawn_latitude AS lat, m.spwan_longitude AS lng, m.spawn_radius_meters AS radius, m.picture_url
+      FROM monsterstbl m
+      LEFT JOIN monster_catchestbl c ON m.Monster_id = c.moster_id
+      WHERE c.catch_id IS NULL
     `;
     const [rows] = await pool.query(query);
     res.json(rows);

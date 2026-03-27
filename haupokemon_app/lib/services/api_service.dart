@@ -74,6 +74,15 @@ class ApiService {
     }
   }
 
+  // Game/Catches Methods
+  Future<List<dynamic>> getCapturedMonsters(String playerId) async {
+    return await getList('game/catches/$playerId');
+  }
+
+  Future<void> deleteCatch(String catchId) async {
+    await deleteData('game/catches/$catchId');
+  }
+
   static const String awsLambdaUrl = 'https://xbo2ekleu0.execute-api.eu-west-3.amazonaws.com/default/ManageHAUPokemonEC2';
 
   // EC2 Methods (Serverless)
