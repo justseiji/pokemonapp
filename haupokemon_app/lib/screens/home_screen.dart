@@ -19,6 +19,7 @@ class HomeScreen extends StatelessWidget {
         children: [
           _buildMenuButton(context, 'Players', Icons.people, '/players'),
           _buildMenuButton(context, 'Monsters', Icons.pets, '/monsters'),
+          _buildMenuButton(context, 'Captured Monsters', Icons.catching_pokemon, '/captured'),
           _buildMenuButton(context, 'Catch Radar', Icons.radar, '/catch'),
           _buildMenuButton(context, 'World Map', Icons.map, '/map'),
           _buildMenuButton(
@@ -126,6 +127,15 @@ class HomeScreen extends StatelessWidget {
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.pushNamed(context, '/monsters');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.catching_pokemon_sharp),
+                title: const Text('Captured Monsters'),
+                contentPadding: const EdgeInsets.only(left: 50),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushNamed(context, '/captured');
                 },
               ),
             ],

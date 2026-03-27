@@ -14,7 +14,9 @@ class AboutUsScreen extends StatelessWidget {
           children: [
             const CircleAvatar(
               radius: 60,
-              backgroundImage: NetworkImage('https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png'), // Pikachu!
+              backgroundImage: NetworkImage(
+                'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png',
+              ), // Pikachu!
             ),
             const SizedBox(height: 20),
             Text(

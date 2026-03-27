@@ -10,6 +10,7 @@ import 'screens/show_monster_map.dart';
 import 'screens/leaderboard_screen.dart';
 import 'screens/ec2_management_screen.dart';
 import 'screens/about_us_screen.dart';
+import 'screens/captured_monsters_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -83,6 +84,7 @@ class HauPokemonApp extends StatelessWidget {
         '/leaderboard': (context) => const LeaderboardScreen(),
         '/ec2': (context) => const Ec2ManagementScreen(),
         '/about': (context) => const AboutUsScreen(),
+        '/captured': (context) => const CapturedMonstersScreen(),
       },
     );
   }
