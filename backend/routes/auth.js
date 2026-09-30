@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const pool = require('../database');
+const { getJwtSecret } = require('../middleware/auth');
+const { hashPassword, verifyPassword } = require('../passwords');
 
 // POST /auth/login
 router.post('/login', async (req, res) => {
@@ -12,17 +14,23 @@ router.post('/login', async (req, res) => {
   }
 
   try {
-    const [rows] = await pool.query('SELECT player_id as id, player_name, username FROM playerstbl WHERE username = ? AND password = ?', [username, password]);
-    
-    if (rows.length > 0) {
-      const player = rows[0];
-      const token = jwt.sign({ id: player.id, username: player.username }, process.env.JWT_SECRET || 'fallback_secret', { expiresIn: '2h' });
-      res.json({ token, player });
-    } else {
-      res.status(401).json({ message: 'Invalid credentials' });
+    const [rows] = await pool.query('SELECT player_id as id, player_name, username, password FROM playerstbl WHERE username = ?', [username]);
+    const { ok, needsRehash } = await verifyPassword(password, rows[0]?.password);
+
+    if (!ok) {
+      return res.status(401).json({ message: 'Invalid credentials' });
     }
+
+    const { password: _stored, ...player } = rows[0];
+    if (needsRehash) {
+      await pool.query('UPDATE playerstbl SET password = ? WHERE player_id = ?', [await hashPassword(password), player.id]);
+    }
+
+    const token = jwt.sign({ id: player.id, username: player.username }, getJwtSecret(), { expiresIn: '2h' });
+    res.json({ token, player });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Login error:', error);
+    res.status(500).json({ message: 'Login failed' });
   }
 });
 
@@ -34,17 +42,18 @@ router.post('/register', async (req, res) => {
   }
 
   try {
-    const [existing] = await pool.query('SELECT * FROM playerstbl WHERE username = ?', [username]);
+    const [existing] = await pool.query('SELECT player_id FROM playerstbl WHERE username = ?', [username]);
     if (existing.length > 0) return res.status(400).json({ message: 'Username already exists' });
     
     const [result] = await pool.query(
       'INSERT INTO playerstbl (player_name, username, password) VALUES (?, ?, ?)',
-      [player_name, username, password]
+      [player_name, username, await hashPassword(password)]
     );
 
     res.status(201).json({ message: 'Account created successfully', player_id: result.insertId });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Register error:', error);
+    res.status(500).json({ message: 'Registration failed' });
   }
 });
 

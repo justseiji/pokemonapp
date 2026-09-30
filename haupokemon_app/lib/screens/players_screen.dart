@@ -22,12 +22,13 @@ class _PlayersScreenState extends State<PlayersScreen> {
   Future<void> _fetchPlayers() async {
     try {
       final players = await apiService.getList('players');
+      if (!mounted) return;
       setState(() {
         _players = players;
         _isLoading = false;
       });
     } catch (e) {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -90,10 +91,14 @@ class _PlayersScreenState extends State<PlayersScreen> {
                   }
                   setState(() => _isVerifying = true);
                   try {
-                    // Send password dynamically to AWS login route to check authenticity
-                    await apiService.login(player['username'].toString(), passwordController.text);
+                    // Send password dynamically to AWS login route to check authenticity.
+                    // login() returns the error JSON instead of throwing, so check for a token.
+                    final response = await apiService.login(player['username'].toString(), passwordController.text);
+                    if (!response.containsKey('token')) throw Exception('Invalid credentials');
+                    if (!context.mounted) return;
                     Navigator.pop(context, passwordController.text); // Success! Lockpass String Granted.
                   } catch (e) {
+                    if (!context.mounted) return;
                     setState(() => _isVerifying = false);
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Incorrect Password! Access Denied.', style: TextStyle(color: Colors.white)), backgroundColor: Colors.red));
                   }
@@ -115,7 +120,7 @@ class _PlayersScreenState extends State<PlayersScreen> {
     if (!confirm) return;
     
     try {
-      await apiService.deleteData('players/${player['id']}');
+      await apiService.deleteData('players/${player['id']}', {'current_password': verifiedPassword});
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Player deleted successfully!')),
@@ -159,7 +164,9 @@ class _PlayersScreenState extends State<PlayersScreen> {
             ),
             TextField(
                 controller: passwordController,
-                decoration: const InputDecoration(labelText: 'Password'),
+                decoration: InputDecoration(
+                  labelText: player == null ? 'Password' : 'New Password (leave blank to keep)',
+                ),
                 obscureText: true,
               ),
           ],
@@ -178,14 +185,15 @@ class _PlayersScreenState extends State<PlayersScreen> {
                 final data = {
                   'player_name': playerNameController.text,
                   'username': usernameController.text,
-                  'password': passwordController.text.isEmpty && verifiedPassword != null ? verifiedPassword : passwordController.text,
+                  'password': passwordController.text,
+                  if (verifiedPassword != null) 'current_password': verifiedPassword,
                 };
                 if (player == null) {
                   await apiService.postData('players', data);
                 } else {
                   await apiService.putData('players/${player['id']}', data);
                 }
-                if (mounted) {
+                if (context.mounted) {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(

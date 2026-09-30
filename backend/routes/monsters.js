@@ -4,6 +4,7 @@ const pool = require('../database');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const { requireAuth } = require('../middleware/auth');
 
 // Configure Multer storage
 const storage = multer.diskStorage({
@@ -15,7 +16,29 @@ const storage = multer.diskStorage({
     cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
   }
 });
-const upload = multer({ storage: storage });
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  fileFilter: (req, file, cb) => {
+    // Only image extensions; anything else (e.g. .html, .js) would be served publicly from /uploads.
+    // (The Flutter client sends application/octet-stream, so the extension is what we can check.)
+    const allowed = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowed.includes(ext)) return cb(null, true);
+    cb(new multer.MulterError('LIMIT_UNEXPECTED_FILE', 'image'));
+  }
+});
+
+// Only delete files that really live inside uploads/ (guards against "../" in stored URLs)
+const uploadsDir = path.resolve(__dirname, '../uploads');
+function deleteUploadedFile(pictureUrl) {
+  if (!pictureUrl || !pictureUrl.startsWith('/uploads/')) return;
+  const filePath = path.resolve(uploadsDir, path.basename(pictureUrl));
+  if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+}
+
+// Reads stay public; every write requires a logged-in player
+router.use((req, res, next) => (req.method === 'GET' ? next() : requireAuth(req, res, next)));
 
 // GET all monsters
 router.get('/', async (req, res) => {
@@ -76,7 +99,12 @@ router.put('/:id', async (req, res) => {
 });
 
 // POST upload new image for a monster
-router.post('/:id/image', upload.single('image'), async (req, res) => {
+router.post('/:id/image', (req, res, next) => {
+  upload.single('image')(req, res, (err) => {
+    if (err) return res.status(400).json({ message: 'Upload rejected: images up to 5 MB only' });
+    next();
+  });
+}, async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ message: 'No image uploaded' });
   }
@@ -85,10 +113,7 @@ router.post('/:id/image', upload.single('image'), async (req, res) => {
   try {
     // Check if monster exists and delete old image if necessary
     const [rows] = await pool.query('SELECT picture_url FROM monsterstbl WHERE Monster_id = ?', [req.params.id]);
-    if (rows.length > 0 && rows[0].picture_url && rows[0].picture_url.startsWith('/uploads/')) {
-      const oldPath = path.join(__dirname, '..', rows[0].picture_url);
-      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
-    }
+    if (rows.length > 0) deleteUploadedFile(rows[0].picture_url);
 
     await pool.query('UPDATE monsterstbl SET picture_url = ? WHERE Monster_id = ?', [pictureUrl, req.params.id]);
     res.json({ message: 'Image uploaded successfully', picture_url: pictureUrl });
@@ -101,10 +126,7 @@ router.post('/:id/image', upload.single('image'), async (req, res) => {
 router.delete('/:id/image', async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT picture_url FROM monsterstbl WHERE Monster_id = ?', [req.params.id]);
-    if (rows.length > 0 && rows[0].picture_url && rows[0].picture_url.startsWith('/uploads/')) {
-      const oldPath = path.join(__dirname, '..', rows[0].picture_url);
-      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
-    }
+    if (rows.length > 0) deleteUploadedFile(rows[0].picture_url);
 
     await pool.query('UPDATE monsterstbl SET picture_url = NULL WHERE Monster_id = ?', [req.params.id]);
     res.json({ message: 'Image deleted successfully' });
@@ -118,11 +140,9 @@ router.delete('/:id', async (req, res) => {
   try {
     // Delete image if exists
     const [rows] = await pool.query('SELECT picture_url FROM monsterstbl WHERE Monster_id = ?', [req.params.id]);
-    if (rows.length > 0 && rows[0].picture_url && rows[0].picture_url.startsWith('/uploads/')) {
-      const oldPath = path.join(__dirname, '..', rows[0].picture_url);
-      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
-    }
+    if (rows.length > 0) deleteUploadedFile(rows[0].picture_url);
 
+    await pool.query('DELETE FROM monster_catchestbl WHERE moster_id = ?', [req.params.id]);
     await pool.query('DELETE FROM monsterstbl WHERE Monster_id = ?', [req.params.id]);
     res.json({ message: 'Monster deleted' });
   } catch (error) {

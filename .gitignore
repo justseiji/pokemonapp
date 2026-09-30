@@ -15,3 +15,8 @@ haupokemon_app/.flutter-plugins-dependencies
 # OS Files
 .DS_Store
 Thumbs.db
+
+# IDE / JVM crash dumps
+.idea/
+hs_err_pid*.log
+replay_pid*.log

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const AWS = require('aws-sdk');
 const path = require('path');
+const { requireAuth } = require('../middleware/auth');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env'), override: true });
 
 // Configure AWS with credentials from .env
@@ -16,6 +17,9 @@ const ec2 = new AWS.EC2();
 function getInstanceId() {
   return process.env.EC2_INSTANCE_ID || process.env.INSTANCE_ID;
 }
+
+// Starting/stopping servers must never be anonymous
+router.use(requireAuth);
 
 // Middleware to check if Instance ID exists
 router.use((req, res, next) => {

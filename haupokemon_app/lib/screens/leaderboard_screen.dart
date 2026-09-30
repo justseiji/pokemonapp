@@ -21,12 +21,13 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   void _fetchLeaderboard() async {
     try {
       final leaders = await apiService.getList('game/leaderboard');
+      if (!mounted) return;
       setState(() {
         _leaders = leaders;
         _isLoading = false;
       });
     } catch (e) {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -50,7 +51,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                               : (index == 2 ? Colors.brown[300] : Colors.blue)),
                   ),
                   title: Text(
-                    leader['username'] ?? 'Player ${leader['player_id']}',
+                    leader['username'] ?? 'Player ${leader['id']}',
                   ),
                   trailing: Text(
                     'Catches: ${leader['score'] ?? 0}',

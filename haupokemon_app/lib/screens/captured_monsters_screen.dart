@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
@@ -57,7 +56,8 @@ class _CapturedMonstersScreenState extends State<CapturedMonstersScreen> {
     if (mounted) setState(() => _isLoading = true);
 
     try {
-      final bytes = await File(image.path).readAsBytes();
+      // XFile.readAsBytes works on web too (dart:io File does not)
+      final bytes = await image.readAsBytes();
       await apiService.uploadImage(
         'monsters/$monsterId/image',
         bytes,
