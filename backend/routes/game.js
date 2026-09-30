@@ -1,13 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../database');
+const { requireAuth } = require('../middleware/auth');
 
 // POST /game/catch
-router.post('/catch', async (req, res) => {
-  const { player_id, monster_id, location_id } = req.body;
+// The catcher is always the logged-in player (from the JWT), never a client-supplied player_id.
+router.post('/catch', requireAuth, async (req, res) => {
+  const { monster_id, location_id } = req.body;
+  const player_id = req.user.id;
 
-  if (!player_id || !monster_id) {
-    return res.status(400).json({ message: 'Player ID and Monster ID required' });
+  if (!monster_id) {
+    return res.status(400).json({ message: 'Monster ID required' });
   }
 
   try {
@@ -15,14 +18,23 @@ router.post('/catch', async (req, res) => {
     const lat = req.body.latitude || 0;
     const lng = req.body.longitude || 0;
 
+    // INSERT ... SELECT ... WHERE NOT EXISTS makes "already caught" atomic, so two
+    // players scanning at the same moment can't both catch the same monster.
     const [result] = await pool.query(
-      'INSERT INTO monster_catchestbl (player_id, moster_id, location_id, latitude, longitude, catch_datetime) VALUES (?, ?, ?, ?, ?, NOW())',
-      [player_id, monster_id, location_id || 1, lat, lng]
+      `INSERT INTO monster_catchestbl (player_id, moster_id, location_id, latitude, longitude, catch_datetime)
+       SELECT ?, m.Monster_id, ?, ?, ?, NOW()
+       FROM monsterstbl m
+       WHERE m.Monster_id = ?
+         AND NOT EXISTS (SELECT 1 FROM monster_catchestbl c WHERE c.moster_id = m.Monster_id)`,
+      [player_id, location_id || 1, lat, lng, monster_id]
     );
+
+    if (result.affectedRows === 0) {
+      return res.status(409).json({ message: 'Monster not found or already caught' });
+    }
 
     // Instead of deleting the monster, we leave it in monsterstbl so its name and photo can be referenced.
     // The monsters endpoint has been updated to exclude caught monsters.
-
 
     res.json({ message: 'Monster caught successfully!', catch_id: result.insertId });
   } catch (error) {
@@ -33,7 +45,7 @@ router.post('/catch', async (req, res) => {
 
 // GET /game/catches/:player_id
 // Retrieve all monsters caught by a specific player
-router.get('/catches/:player_id', async (req, res) => {
+router.get('/catches/:player_id', requireAuth, async (req, res) => {
   try {
     const query = `
       SELECT c.catch_id, c.catch_datetime, m.Monster_id as id, m.Monster_name as name, m.Monster_type as type, m.picture_url
@@ -51,10 +63,11 @@ router.get('/catches/:player_id', async (req, res) => {
 });
 
 // DELETE /game/catches/:catch_id
-// Deletes a caught monster (releases it back to the wild) and lowers leaderboard score
-router.delete('/catches/:catch_id', async (req, res) => {
+// Deletes a caught monster (releases it back to the wild) and lowers leaderboard score.
+// Only the player who caught it may release it.
+router.delete('/catches/:catch_id', requireAuth, async (req, res) => {
   try {
-    const [result] = await pool.query('DELETE FROM monster_catchestbl WHERE catch_id = ?', [req.params.catch_id]);
+    const [result] = await pool.query('DELETE FROM monster_catchestbl WHERE catch_id = ? AND player_id = ?', [req.params.catch_id, req.user.id]);
     if (result.affectedRows === 0) {
       return res.status(404).json({ message: 'Catch not found' });
     }

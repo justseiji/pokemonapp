@@ -167,10 +167,12 @@ class _CatchMapScreenState extends State<CatchMapScreen> {
     await _audioPlayer.stop();
 
     try {
+      // The server takes the player from the JWT; we send where the catch happened
       final response = await apiService.postData('game/catch', {
-        'player_id': playerId,
         'monster_id': monster['id'],
         'location_id': monster['location_id'],
+        'latitude': _currentPosition?.latitude,
+        'longitude': _currentPosition?.longitude,
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -187,9 +189,9 @@ class _CatchMapScreenState extends State<CatchMapScreen> {
     } catch (e) {
       if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(
-              'Failed to complete the catch action based on location.',
+              'Failed to catch ${monster['name']}: ${e.toString().replaceFirst('Exception: ', '')}',
             ),
           ),
         );

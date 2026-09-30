@@ -22,6 +22,7 @@ class _MonstersScreenState extends State<MonstersScreen> {
   Future<void> _fetchMonsters() async {
     try {
       final monsters = await apiService.getList('monsters');
+      if (!mounted) return;
       setState(() {
         _monsters = monsters;
         _isLoading = false;

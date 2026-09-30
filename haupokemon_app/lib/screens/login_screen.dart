@@ -69,7 +69,7 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       }
     } catch (e) {
-      _showError('Connection error: $e');
+      _showError(e.toString().replaceFirst('Exception: ', ''));
     }
     
     if (mounted) setState(() => _isLoading = false);
