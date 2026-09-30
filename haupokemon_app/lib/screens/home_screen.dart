@@ -171,7 +171,9 @@ class HomeScreen extends StatelessWidget {
             onTap: () async {
               final prefs = await SharedPreferences.getInstance();
               await prefs.clear();
-              Navigator.pushReplacementNamed(context, '/');
+              if (!context.mounted) return;
+              // Clear the whole stack so Back can't return to logged-in screens
+              Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
             },
           ),
         ],

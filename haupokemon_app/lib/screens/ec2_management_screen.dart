@@ -23,11 +23,13 @@ class _Ec2ManagementScreenState extends State<Ec2ManagementScreen> {
     setState(() => _isLoading = true);
     try {
       final response = await apiService.getEc2Status();
+      if (!mounted) return;
       setState(() {
         _status = response['state'] ?? 'Unknown';
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _status = 'Error loading status';
         _isLoading = false;

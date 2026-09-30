@@ -15,6 +15,15 @@ class ApiService {
     };
   }
 
+  // Pulls the server's {"message": ...} out of an error response so the UI can show it
+  static String _errorMessage(http.Response response) {
+    try {
+      final body = jsonDecode(response.body);
+      if (body is Map && body['message'] != null) return body['message'].toString();
+    } catch (_) {}
+    return 'Server error (${response.statusCode})';
+  }
+
   // Auth
   Future<Map<String, dynamic>> login(String username, String password) async {
     final response = await http.post(
@@ -45,7 +54,7 @@ class ApiService {
       body: jsonEncode(data),
     );
     if (response.statusCode != 200 && response.statusCode != 201) {
-      throw Exception('Server error: ${response.body}');
+      throw Exception(_errorMessage(response));
     }
     return jsonDecode(response.body);
   }
@@ -58,19 +67,20 @@ class ApiService {
       body: jsonEncode(data),
     );
     if (response.statusCode != 200 && response.statusCode != 201) {
-      throw Exception('Server error: ${response.body}');
+      throw Exception(_errorMessage(response));
     }
     return jsonDecode(response.body);
   }
 
   // Generic DELETE
-  Future<void> deleteData(String endpoint) async {
+  Future<void> deleteData(String endpoint, [Map<String, dynamic>? data]) async {
     final response = await http.delete(
       Uri.parse('$baseUrl/$endpoint'),
       headers: await _getHeaders(),
+      body: data == null ? null : jsonEncode(data),
     );
     if (response.statusCode != 200) {
-      throw Exception('Failed to delete data for $endpoint');
+      throw Exception(_errorMessage(response));
     }
   }
 
